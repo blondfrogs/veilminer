@@ -803,6 +803,7 @@ bool fulltest(const uint32_t *hash, const uint32_t *target)
 		}
 	}
 
+
 	if ((!rc && opt_debug) || opt_debug_diff) {
 		uint32_t hash_be[8], target_be[8];
 		char *hash_str, *target_str;
@@ -1441,7 +1442,7 @@ static uint32_t getblocheight(struct stratum_ctx *sctx)
 
 static bool stratum_notify(struct stratum_ctx *sctx, json_t *params)
 {
-	const char *job_id, *prevhash, *coinb1, *coinb2, *version, *nbits, *stime;
+	const char *job_id, *prevhash, *denom10, *denom100, *denom1000, *denom10000, *prooffullnode, *coinb1, *coinb2, *version, *nbits, *stime;
 	const char *claim = NULL, *nreward = NULL;
 	size_t coinb1_size, coinb2_size;
 	bool clean, ret = false;
@@ -1453,6 +1454,7 @@ static bool stratum_notify(struct stratum_ctx *sctx, json_t *params)
 	char algo[64] = { 0 };
 	get_currentalgo(algo, sizeof(algo));
 	bool has_claim = !strcasecmp(algo, "lbry");
+	bool is_x16rt = !strcasecmp(algo, "x16rt");
 
 	if (sctx->is_equihash) {
 		return equi_stratum_notify(sctx, params);
@@ -1460,6 +1462,13 @@ static bool stratum_notify(struct stratum_ctx *sctx, json_t *params)
 
 	job_id = json_string_value(json_array_get(params, p++));
 	prevhash = json_string_value(json_array_get(params, p++));
+	if (is_x16rt) {
+		denom10 = json_string_value(json_array_get(params, p++));
+		denom100 = json_string_value(json_array_get(params, p++));
+		denom1000 = json_string_value(json_array_get(params, p++));
+		denom10000 = json_string_value(json_array_get(params, p++));
+		prooffullnode = json_string_value(json_array_get(params, p++));
+	}
 	if (has_claim) {
 		claim = json_string_value(json_array_get(params, p++));
 		if (!claim || strlen(claim) != 64) {
@@ -1484,6 +1493,15 @@ static bool stratum_notify(struct stratum_ctx *sctx, json_t *params)
 	    strlen(nbits) != 8 || strlen(stime) != 8) {
 		applog(LOG_ERR, "Stratum notify: invalid parameters");
 		goto out;
+	}
+
+	if (is_x16rt) {
+		if (!denom10 || !denom100 || !denom1000 || !denom10000 || !prooffullnode || strlen(denom10) != 64 ||
+			strlen(denom100) != 64 || strlen(denom1000) != 64 || strlen(denom10000) != 64 ||
+			strlen(prooffullnode) != 64) {
+			applog(LOG_ERR, "Stratum notify: invalid x16rt parameters");
+			goto out;
+		}
 	}
 
 	/* store stratum server time diff */
@@ -1529,6 +1547,13 @@ static bool stratum_notify(struct stratum_ctx *sctx, json_t *params)
 	free(sctx->job.job_id);
 	sctx->job.job_id = strdup(job_id);
 	hex2bin(sctx->job.prevhash, prevhash, 32);
+	if (is_x16rt) {
+		hex2bin(sctx->job.denom10, denom10, 32);
+		hex2bin(sctx->job.denom100, denom100, 32);
+		hex2bin(sctx->job.denom1000, denom1000, 32);
+		hex2bin(sctx->job.denom10000, denom10000, 32);
+		hex2bin(sctx->job.proofoffullnode, prooffullnode, 32);
+	}
 	if (has_claim) hex2bin(sctx->job.claim, claim, 32);
 
 	sctx->job.height = getblocheight(sctx);
@@ -2327,6 +2352,9 @@ void print_hash_tests(void)
 
 	x16r_hash(&hash[0], &buf[0]);
 	printpfx("X16r", hash);
+
+//	x16rt_hash(&hash[0], &buf[0]);
+//	printpfx("X16rt", hash);
 
 	x16s_hash(&hash[0], &buf[0]);
 	printpfx("X16s", hash);

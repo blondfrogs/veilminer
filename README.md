@@ -1,8 +1,8 @@
-# Nevermore miner
+# VeilMiner
 
-Quoth the Raven(coin), "Nevermore."
+Veil, "Veilminer."
 
-An optimized fork of ccminer developed specially for x16r.
+An optimized fork of nevermore developed specially for x16rt.
 
 Based on Christian Buchner's &amp; Christian H.'s CUDA project, no longer active on github since 2014.
 
@@ -12,6 +12,14 @@ Check the [README.txt](README.txt) for the additions
 ## Donation Addresses
 
 Consider supporting the contributors to this miner by donating to the following addresses:
+
+blondfrogs / blondfrogs#8615 (developer of x16rt miner)
+
+- BTC: 1JXERhRD7KCe1dUEA6AuThYGiwN7h2AR36
+
+- Veil: TBD
+
+- ETH: 0x7327d3a49e1724c64b5969144e7a90150b462b66
 
 brianmct / brian112358 (developer of Nevermore miner)
 
@@ -23,15 +31,7 @@ brianmct / brian112358 (developer of Nevermore miner)
 
 - DOGE: D7h81HeRVV3xPWL9CqCC2Z6AevG4gBdGxZ
 
-tpruvot (original x16r ccminer implementation):
-
-- BTC: 1AJdfCpLWPNoAMDfHF1wD5y8VgKSSTHxPo
-
-alexis78 (some optimized CUDA kernels for x16r)
-
-- RVN: RYKaoWqR5uahFioNvxabQtEBjNkBmRoRdg
-
-A part of the recent algos were originally written by [djm34](https://github.com/djm34) and [alexis78](https://github.com/alexis78)
+A part of the recent algos were originally written by [blondfrogs](https://github.com/blondfrogs)
 
 This variant was tested and built on Linux (ubuntu server 14.04, 16.04, Fedora 22 to 25)
 It is also built for Windows 7 to 10 with VStudio 2013, to stay compatible with Windows 7 and Vista.

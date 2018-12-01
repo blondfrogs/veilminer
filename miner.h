@@ -329,6 +329,7 @@ extern int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, unsi
 extern int scanhash_x16s(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
 extern int scanhash_x17(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
 extern int scanhash_zr5(int thr_id, struct work *work, uint32_t max_nonce, unsigned long *hashes_done);
+extern int scanhash_x16rt(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
 
 extern int scanhash_scrypt(int thr_id, struct work *work, uint32_t max_nonce, unsigned long *hashes_done,
 	unsigned char *scratchbuf, struct timeval *tv_start, struct timeval *tv_end);
@@ -395,6 +396,7 @@ extern void free_x16r(int thr_id);
 extern void free_x16s(int thr_id);
 extern void free_x17(int thr_id);
 extern void free_zr5(int thr_id);
+extern void free_x16rt(int thr_id);
 //extern void free_sha256d(int thr_id);
 extern void free_scrypt(int thr_id);
 extern void free_scrypt_jane(int thr_id);
@@ -656,6 +658,15 @@ void bench_display_results();
 struct stratum_job {
 	char *job_id;
 	unsigned char prevhash[32];
+
+	// Start x16rt fields
+    unsigned char denom10[32];
+    unsigned char denom100[32];
+    unsigned char denom1000[32];
+    unsigned char denom10000[32];
+    unsigned char proofoffullnode[32];
+    // End x16rt fields
+
 	size_t coinbase_size;
 	unsigned char *coinbase;
 	unsigned char *xnonce2;
@@ -745,6 +756,14 @@ struct work {
 	char *workid;
 	// zec solution
 	uint8_t extra[1388];
+
+	// veil block data
+    uint32_t merkleroothash[8];
+    uint32_t witmerkleroothash[8];
+	uint32_t denom10[8];
+	uint32_t denom100[8];
+	uint32_t denom1000[8];
+	uint32_t denom10000[8];
 };
 
 #define POK_BOOL_MASK 0x00008000
@@ -950,6 +969,7 @@ void x17hash(void *output, const void *input);
 void wildkeccak_hash(void *output, const void *input, uint64_t* scratchpad, uint64_t ssize);
 void zr5hash(void *output, const void *input);
 void zr5hash_pok(void *output, uint32_t *pdata);
+void x16rt_hash(void *output, const void *input);
 
 #ifdef __cplusplus
 }

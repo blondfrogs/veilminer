@@ -1120,10 +1120,10 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 			params = json_dumps(val, 0);
 			json_decref(val);
             if (opt_algo == ALGO_ZX16RT) {
-                req = (char*)malloc(128 + 2 * size + strlen(work->txs2) + 2 + strlen(denom10_str) * 4 + 16 * 4 + strlen(merkleroot_str) * 2 + strlen(params));
+                req = (char*)malloc(128 + 2 * size + 4 + strlen(work->txs2) + 2 + strlen(denom10_str) * 4 + 16 * 4 + strlen(merkleroot_str) * 2 + strlen(params));
                 sprintf(req,
-                        "{\"method\": \"submitblock\", \"params\": [\"%s%s%s%s%s%s%s%s%s%s%s%s%s\", %s], \"id\":4}\r\n",
-                        data_str, work->txs2,"04","0a00000000000000", denom10_str,"6400000000000000",denom100_str,"e803000000000000",denom1000_str,"1027000000000000",denom10000_str,merkleroot_str,witmerkleroot_str, params);
+                        "{\"method\": \"submitblock\", \"params\": [\"%s%s%s%s%s%s%s%s%s%s%s%s%s%s\", %s], \"id\":4}\r\n",
+                        data_str, "0000", work->txs2,"04","0a00000000000000", denom10_str,"6400000000000000",denom100_str,"e803000000000000",denom1000_str,"1027000000000000",denom10000_str,merkleroot_str,witmerkleroot_str, params);
             } else {
 
                 req = (char*) malloc(128 + 2 * size + strlen(work->txs2) + strlen(params));
@@ -1135,10 +1135,10 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 		}
 		else {
         	if (opt_algo == ALGO_ZX16RT) {
-				req = (char*)malloc(128 + 2 * size + strlen(work->txs2) + 2 + strlen(denom10_str) * 4 + 16 * 4 + strlen(merkleroot_str) * 2);
+				req = (char*)malloc(128 + 2 * size + 4 + strlen(work->txs2) + 2 + strlen(denom10_str) * 4 + 16 * 4 + strlen(merkleroot_str) * 2);
 				sprintf(req,
-						"{\"method\": \"submitblock\", \"params\": [\"%s%s%s%s%s%s%s%s%s%s%s%s%s\"], \"id\":4}\r\n",
-						data_str, work->txs2,"04","0a00000000000000", denom10_str,"6400000000000000",denom100_str,"e803000000000000",denom1000_str,"1027000000000000",denom10000_str,merkleroot_str,witmerkleroot_str);
+						"{\"method\": \"submitblock\", \"params\": [\"%s%s%s%s%s%s%s%s%s%s%s%s%s%s\"], \"id\":4}\r\n",
+						data_str, "0000", work->txs2,"04","0a00000000000000", denom10_str,"6400000000000000",denom100_str,"e803000000000000",denom1000_str,"1027000000000000",denom10000_str,merkleroot_str,witmerkleroot_str);
         	} else {
 				req = (char*)malloc(128 + 2 * 80 + strlen(work->txs2));
 				sprintf(req,

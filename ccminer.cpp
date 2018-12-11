@@ -1093,6 +1093,7 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
             be32enc(work->data + i, work->data[i]);
         }
 
+
 		int size = 80;
 		cbin2hex(data_str, (char *)work->data, size);
 
@@ -1585,9 +1586,6 @@ static bool gbt_work_decode_full_zx16rt(const json_t *val, struct work *work)
 	int i, n;
 	uint32_t version, curtime, bits;
 	uint32_t prevhash[8];
-	uint32_t veildatahash[8];
-	uint32_t merklewithash[8];
-	uint32_t merklehash[8];
 	uint32_t denom10[8];
 	uint32_t denom100[8];
 	uint32_t denom1000[8];
@@ -1598,7 +1596,7 @@ static bool gbt_work_decode_full_zx16rt(const json_t *val, struct work *work)
 	int tx_count, tx_size;
 	uchar txc_vi[9];
 	uchar(*merkle_tree)[32] = NULL;
-	bool coinbase_append = true;
+	bool coinbase_append = false;
 	bool submit_coinbase = false;
 	bool version_force = false;
 	bool version_reduce = false;
@@ -1654,21 +1652,6 @@ static bool gbt_work_decode_full_zx16rt(const json_t *val, struct work *work)
 
 	if (unlikely(!jobj_binary(val, "previousblockhash", prevhash, sizeof(prevhash)))) {
 		applog(LOG_ERR, "JSON invalid previousblockhash");
-		goto out;
-	}
-
-	if (unlikely(!jobj_binary(val, "witnessmerkleroothash", merklewithash, sizeof(merklewithash)))) {
-		applog(LOG_ERR, "JSON invalid witnessmerkleroothash");
-		goto out;
-	}
-
-	if (unlikely(!jobj_binary(val, "merkleroothash", merklehash, sizeof(merklehash)))) {
-		applog(LOG_ERR, "JSON invalid merkleroothash");
-		goto out;
-	}
-
-	if (unlikely(!jobj_binary(val, "veildatahash", veildatahash, sizeof(veildatahash)))) {
-		applog(LOG_ERR, "JSON invalid veildatahash");
 		goto out;
 	}
 
@@ -1754,21 +1737,28 @@ static bool gbt_work_decode_full_zx16rt(const json_t *val, struct work *work)
 		}
 		cbvalue = (int64_t)(json_is_integer(tmp) ? json_integer_value(tmp) : json_number_value(tmp));
 		cbtx = (uchar*)malloc(256);
-		le32enc((uint32_t *)cbtx, 1); /* version */
-		cbtx[4] = 1; /* in-counter */
-		memset(cbtx + 5, 0x00, 32); /* prev txout hash */
-		le32enc((uint32_t *)(cbtx + 37), 0xffffffff); /* prev txout index */
-		cbtx_size = 43;
+        cbtx[0] = 2; /* version */
+        cbtx[1] = 0; /* Tx Type */
+        cbtx[2] = 0; /* Has Witness */
+        cbtx[3] = 0; /* nLockTime */
+        cbtx[4] = 0; /* nLockTime */
+        cbtx[5] = 0; /* nLockTime */
+        cbtx[6] = 0; /* nLockTime */
+		cbtx[7] = 1; /* size of vin */
+		memset(cbtx + 8, 0x00, 35); /* prev txout hash */
+		le32enc((uint32_t *)(cbtx + 40), 0xffffffff); /* prev txout index */
+		cbtx_size = 46;
 		/* BIP 34: height in coinbase */
 		for (n = work->height; n; n >>= 8)
 			cbtx[cbtx_size++] = n & 0xff;
 		if((cbtx[cbtx_size-1] & 0x80))
 			cbtx[cbtx_size++] = 0x00;
-		cbtx[42] = cbtx_size - 43;
-		cbtx[41] = cbtx_size - 42; /* scriptsig length */
+		cbtx[45] = cbtx_size - 46;
+		cbtx[44] = cbtx_size - 45; /* scriptsig length */
 		le32enc((uint32_t *)(cbtx + cbtx_size), 0xffffffff); /* sequence */
-		cbtx_size += 4;
-		cbtx[cbtx_size++] = 1; /* out-counter */
+        cbtx_size += 4;
+		cbtx[cbtx_size++] = 1; /* out-counter script length */
+        cbtx[cbtx_size++] = 1; /* out-counter size*/
 		le32enc((uint32_t *)(cbtx + cbtx_size), (uint32_t)cbvalue); /* value */
 		le32enc((uint32_t *)(cbtx + cbtx_size + 4), cbvalue >> 32);
 		cbtx_size += 8;
@@ -1776,7 +1766,6 @@ static bool gbt_work_decode_full_zx16rt(const json_t *val, struct work *work)
 		memcpy(cbtx + cbtx_size, pk_script, pk_script_size);
 		cbtx_size += (int)pk_script_size;
 		le32enc((uint32_t *)(cbtx + cbtx_size), 0); /* lock time */
-		cbtx_size += 4;
 		coinbase_append = true;
 	}
 	if (coinbase_append) {
@@ -1793,7 +1782,7 @@ static bool gbt_work_decode_full_zx16rt(const json_t *val, struct work *work)
 					applog(LOG_ERR, "JSON invalid coinbaseaux");
 					break;
 				}
-				if (cbtx[41] + xsig_len + n <= 100) {
+				if (cbtx[44] + xsig_len + n <= 100) {
 					memcpy(xsig + xsig_len, buf, n);
 					xsig_len += n;
 				}
@@ -1801,12 +1790,12 @@ static bool gbt_work_decode_full_zx16rt(const json_t *val, struct work *work)
 			}
 		}
 		if (xsig_len) {
-			unsigned char *ssig_end = cbtx + 42 + cbtx[41];
-			int push_len = cbtx[41] + xsig_len < 76 ? 1 :
-						   cbtx[41] + 2 + xsig_len > 100 ? 0 : 2;
+			unsigned char *ssig_end = cbtx + 45 + cbtx[44];
+			int push_len = cbtx[44] + xsig_len < 76 ? 1 :
+						   cbtx[44] + 2 + xsig_len > 100 ? 0 : 2;
 			n = xsig_len + push_len;
-			memmove(ssig_end + n, ssig_end, cbtx_size - 42 - cbtx[41]);
-			cbtx[41] += n;
+			memmove(ssig_end + n, ssig_end, cbtx_size - 45 - cbtx[44]);
+			cbtx[44] += n;
 			if (push_len == 2)
 				*(ssig_end++) = 0x4c; /* OP_PUSHDATA1 */
 			if (push_len)
@@ -1855,8 +1844,6 @@ static bool gbt_work_decode_full_zx16rt(const json_t *val, struct work *work)
 	work->data[0] = swab32(version);
 	for (i = 0; i < 8; i++)
 		work->data[8 - i] = le32dec(prevhash + i);
-	for (i = 0; i < 8; i++)
-		work->data[16 - i] = le32dec(veildatahash + i);
 	work->data[17] = swab32(curtime);
 	work->data[18] = le32dec(&bits);
 	memset(work->data + 19, 0x00, 52);
@@ -1864,10 +1851,9 @@ static bool gbt_work_decode_full_zx16rt(const json_t *val, struct work *work)
 	work->data[31] = 0x00000280;
 
 	for (i = 0; i < 8; i++)
-		work->merkleroothash[7 - i] = le32dec(merklehash + i);
-
+		work->merkleroothash[0 + i] = be32dec((uint32_t *)merkle_tree[0] + i);
 	for (i = 0; i < 8; i++)
-		work->witmerkleroothash[7 - i] = le32dec(merklewithash + i);
+		work->witmerkleroothash[0 + i] = be32dec((uint32_t *)merkle_tree[0] + i);
 
 	for (i = 0; i < 8; i++)
 		work->denom10[7 - i] = be32dec(denom10 + i);
@@ -1877,6 +1863,51 @@ static bool gbt_work_decode_full_zx16rt(const json_t *val, struct work *work)
 		work->denom1000[7 - i] = be32dec(denom1000 + i);
 	for (i = 0; i < 8; i++)
 		work->denom10000[7 - i] = be32dec(denom10000 + i);
+
+    uint32_t pofnhash[8];
+	memset(pofnhash, 0x00, 32);
+
+    char denom10_str[2 * sizeof(work->denom10) + 1];
+    char denom100_str[2 * sizeof(work->denom100) + 1];
+    char denom1000_str[2 * sizeof(work->denom1000) + 1];
+    char denom10000_str[2 * sizeof(work->denom10000) + 1];
+    char merkleroot_str[2 * sizeof(work->merkleroothash) + 1];
+    char witmerkleroot_str[2 * sizeof(work->witmerkleroothash) + 1];
+    char pofn_str[2 * sizeof(pofnhash) + 1];
+
+    cbin2hex(denom10_str, (char*) work->denom10, 32);
+    cbin2hex(denom100_str, (char*) work->denom100, 32);
+    cbin2hex(denom1000_str, (char*) work->denom1000, 32);
+    cbin2hex(denom10000_str, (char*) work->denom10000, 32);
+    cbin2hex(merkleroot_str, (char*) work->merkleroothash, 32);
+    cbin2hex(witmerkleroot_str, (char*) work->witmerkleroothash, 32);
+    cbin2hex(pofn_str, (char*) pofnhash, 32);
+
+
+    if (true) {
+        char* data;
+        data = (char*)malloc(2 + strlen(denom10_str) * 4 + 16 * 4 + strlen(merkleroot_str) * 3);
+
+        // Build the block header veildatahash in hex
+        sprintf(data,
+                "%s%s%s%s%s%s%s%s%s%s%s%s",
+                merkleroot_str, witmerkleroot_str, "04","0a00000000000000", denom10_str,"6400000000000000",denom100_str,"e803000000000000",denom1000_str,"1027000000000000",denom10000_str, pofn_str);
+
+        // Covert the hex to binary
+        uint32_t test[100];
+        hex2bin(&test, data, 257);
+
+        // Compute the sha256d of the binary
+        uint32_t _ALIGN(64) hash[8];
+        sha256d((unsigned char*)hash, (unsigned char*)&(test), 257);
+
+        // assign the veildatahash in the blockheader
+		for (i = 0; i < 8; i++)
+			work->data[16 - i] = le32dec(hash + i);
+
+//        applog(LOG_INFO, "veildatahash: %08x%08x%08x%08x%08x%08x%08x%08x",hash[7],hash[6],hash[5],hash[4],hash[3],hash[2],hash[1], hash[0]);
+        free(data);
+    }
 
 	if (unlikely(!jobj_binary(val, "target", target, sizeof(target)))) {
 		applog(LOG_ERR, "JSON invalid target");
@@ -2026,6 +2057,8 @@ static bool get_upstream_work(CURL *curl, struct work *work)
 	const char *rpc_req = json_rpc_getwork;
 	json_t *val;
 
+    applog(LOG_INFO, "Get upsteam work");
+
 	gettimeofday(&tv_start, NULL);
 
 	if (opt_algo == ALGO_SIA) {
@@ -2053,6 +2086,7 @@ start:
 	gettimeofday(&tv_end, NULL);
 
 	if (have_stratum || unlikely(work->pooln != cur_pooln)) {
+		applog(LOG_INFO, "have stratum");
 		if (val)
 			json_decref(val);
 		return false;
@@ -2075,16 +2109,21 @@ start:
 		return false;
 
 	if (allow_gbt) {
-	    if (opt_algo == ALGO_ZX16RT)
-		    rc = gbt_work_decode_full_zx16rt(json_object_get(val, "result"), work);
-        else
-            rc = gbt_work_decode_full(json_object_get(val, "result"), work);
+	    if (opt_algo == ALGO_ZX16RT) {
+			applog(LOG_INFO, "GBT x16rt");
+			rc = gbt_work_decode_full_zx16rt(json_object_get(val, "result"), work);
+		}
+        else {
+			applog(LOG_INFO, "GBT other");
+			rc = gbt_work_decode_full(json_object_get(val, "result"), work);
+		}
 		if (!allow_gbt) {
 			json_decref(val);
 			goto start;
 		}
 	}
 	else {
+		applog(LOG_INFO, "NOT GBT");
 		rc = work_decode(json_object_get(val, "result"), work);
 	}
 
@@ -2343,6 +2382,7 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 	uchar merkle_root[64] = { 0 };
 	int i;
 
+	applog(LOG_INFO, "stratum_gen_work");
 	if (sctx->rpc2)
 		return rpc2_stratum_gen_work(sctx, work);
 
@@ -2457,6 +2497,70 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		memcpy(&work->data[12], sctx->job.coinbase, 32); // merkle_root
 		work->data[20] = 0x80000000;
 		if (opt_debug) applog_hex(work->data, 80);
+    } else if (opt_algo == ALGO_ZX16RT) {
+        work->data[17] = le32dec(sctx->job.ntime);
+        work->data[18] = le32dec(sctx->job.nbits);
+        work->data[20] = 0x80000000;
+        work->data[31] = (opt_algo == ALGO_MJOLLNIR) ? 0x000002A0 : 0x00000280;
+
+        for (i = 0; i < 8; i++)
+            work->merkleroothash[7 - i] = be32dec((uint32_t *)merkle_root + i); // Matching
+        for (i = 0; i < 8; i++)
+            work->witmerkleroothash[7 - i] = be32dec((uint32_t *)merkle_root + i); // Matching
+
+        for (i = 0; i < 8; i++)
+            work->denom10[i] = le32dec((uint32_t *)sctx->job.denom10 + i);
+        for (i = 0; i < 8; i++)
+            work->denom100[i] = le32dec((uint32_t *)sctx->job.denom100 + i);
+        for (i = 0; i < 8; i++)
+            work->denom1000[i] = le32dec((uint32_t *)sctx->job.denom1000 + i);
+        for (i = 0; i < 8; i++)
+            work->denom10000[i] = le32dec((uint32_t *)sctx->job.denom10000 + i);
+
+        uint32_t pofnhash[8];
+        memset(pofnhash, 0x00, 32);
+
+        char denom10_str[2 * sizeof(work->denom10) + 1];
+        char denom100_str[2 * sizeof(work->denom100) + 1];
+        char denom1000_str[2 * sizeof(work->denom1000) + 1];
+        char denom10000_str[2 * sizeof(work->denom10000) + 1];
+        char merkleroot_str[2 * sizeof(work->merkleroothash) + 1];
+        char witmerkleroot_str[2 * sizeof(work->witmerkleroothash) + 1];
+        char pofn_str[2 * sizeof(pofnhash) + 1];
+
+        cbin2hex(denom10_str, (char*) work->denom10, 32);
+        cbin2hex(denom100_str, (char*) work->denom100, 32);
+        cbin2hex(denom1000_str, (char*) work->denom1000, 32);
+        cbin2hex(denom10000_str, (char*) work->denom10000, 32);
+        cbin2hex(merkleroot_str, (char*) work->merkleroothash, 32);
+        cbin2hex(witmerkleroot_str, (char*) work->witmerkleroothash, 32);
+        cbin2hex(pofn_str, (char*) pofnhash, 32);
+
+        if (true) {
+            char* data;
+            data = (char*)malloc(2 + strlen(denom10_str) * 4 + 16 * 4 + strlen(merkleroot_str) * 3);
+
+            // Build the block header veildatahash in hex
+            sprintf(data,
+                    "%s%s%s%s%s%s%s%s%s%s%s%s",
+                    merkleroot_str, witmerkleroot_str, "04","0a00000000000000", denom10_str,"6400000000000000",denom100_str,"e803000000000000",denom1000_str,"1027000000000000",denom10000_str, pofn_str);
+
+            applog(LOG_DEBUG,"veilhashdata before hash: %s", data);
+            // Covert the hex to binary
+            uint32_t test[100];
+            hex2bin(&test, data, 257);
+
+            // Compute the sha256d of the binary
+            uint32_t _ALIGN(64) hash[8];
+            sha256d((unsigned char*)hash, (unsigned char*)&(test), 257);
+
+            // assign the veildatahash in the blockheader
+            for (i = 0; i < 8; i++)
+                work->data[16 - i] = le32dec(hash + i);
+
+            applog(LOG_DEBUG, "veildatahash: %08x%08x%08x%08x%08x%08x%08x%08x",hash[7],hash[6],hash[5],hash[4],hash[3],hash[2],hash[1], hash[0]);
+            free(data);
+        }
 	} else {
 		for (i = 0; i < 8; i++)
 			work->data[9 + i] = be32dec((uint32_t *)merkle_root + i);
@@ -4035,6 +4139,7 @@ size_t address_to_script(unsigned char *out, size_t outsz, const char *addr)
 
 	if (!b58dec(addrbin, sizeof(addrbin), addr))
 		return 0;
+
 	addrver = b58check(addrbin, sizeof(addrbin), addr);
 	if (addrver < 0)
 		return 0;

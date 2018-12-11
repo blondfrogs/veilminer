@@ -658,6 +658,11 @@ void bench_display_results();
 struct stratum_job {
 	char *job_id;
 	unsigned char prevhash[32];
+    unsigned char denom10[32];
+    unsigned char denom100[32];
+    unsigned char denom1000[32];
+    unsigned char denom10000[32];
+    unsigned char proofoffullnode[32];
 	size_t coinbase_size;
 	unsigned char *coinbase;
 	unsigned char *xnonce2;

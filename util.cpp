@@ -1455,7 +1455,6 @@ static bool stratum_notify(struct stratum_ctx *sctx, json_t *params)
 	get_currentalgo(algo, sizeof(algo));
 	bool has_claim = !strcasecmp(algo, "lbry");
 	bool is_x16rt = !strcasecmp(algo, "x16rt");
-	applog(LOG_INFO, "bool is %u", is_x16rt);
 
 	if (sctx->is_equihash) {
 		return equi_stratum_notify(sctx, params);

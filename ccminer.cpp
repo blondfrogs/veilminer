@@ -2382,7 +2382,6 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 	uchar merkle_root[64] = { 0 };
 	int i;
 
-	applog(LOG_INFO, "stratum_gen_work");
 	if (sctx->rpc2)
 		return rpc2_stratum_gen_work(sctx, work);
 

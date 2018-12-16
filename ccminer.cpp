@@ -313,7 +313,7 @@ Options:\n\
 			x17         X17\n\
 			wildkeccak  Boolberry\n\
 			zr5         ZR5 (ZiftrCoin)\n\
-			zx16rt		ZX16RT\n\
+			x16rt		X16RT\n\
   -d, --devices         Comma separated list of CUDA devices to use.\n\
                         Device IDs start counting from 0! Alternatively takes\n\
                         string names of your cards like gtx780ti or gt640#2\n\
@@ -1077,7 +1077,7 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 		stratum.job.shares_count++;
 	}
 	else if (work->txs2) {
-		// zx16rt variables
+		// x16rt variables
 		char denom10_str[2 * sizeof(work->denom10) + 1];
 		char denom100_str[2 * sizeof(work->denom100) + 1];
 		char denom1000_str[2 * sizeof(work->denom1000) + 1];
@@ -1097,7 +1097,7 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 		int size = 80;
 		cbin2hex(data_str, (char *)work->data, size);
 
-        if (opt_algo == ALGO_ZX16RT) {
+        if (opt_algo == ALGO_X16RT) {
 			for (int i = 0; i < ARRAY_SIZE(work->merkleroothash); i++) {
 				be32enc(work->merkleroothash + i, work->merkleroothash[i]);
 			}
@@ -1120,7 +1120,7 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 			json_object_set_new(val, "workid", json_string(work->workid));
 			params = json_dumps(val, 0);
 			json_decref(val);
-            if (opt_algo == ALGO_ZX16RT) {
+            if (opt_algo == ALGO_X16RT) {
                 req = (char*)malloc(128 + 2 * size + 4 + strlen(work->txs2) + 2 + strlen(denom10_str) * 4 + 16 * 4 + strlen(merkleroot_str) * 2 + strlen(params));
                 sprintf(req,
                         "{\"method\": \"submitblock\", \"params\": [\"%s%s%s%s%s%s%s%s%s%s%s%s%s%s\", %s], \"id\":4}\r\n",
@@ -1135,7 +1135,7 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 			free(params);
 		}
 		else {
-        	if (opt_algo == ALGO_ZX16RT) {
+        	if (opt_algo == ALGO_X16RT) {
 				req = (char*)malloc(128 + 2 * size + 4 + strlen(work->txs2) + 2 + strlen(denom10_str) * 4 + 16 * 4 + strlen(merkleroot_str) * 2);
 				sprintf(req,
 						"{\"method\": \"submitblock\", \"params\": [\"%s%s%s%s%s%s%s%s%s%s%s%s%s%s\"], \"id\":4}\r\n",
@@ -1581,7 +1581,7 @@ static bool gbt_work_decode_full(const json_t *val, struct work *work)
 }
 
 
-static bool gbt_work_decode_full_zx16rt(const json_t *val, struct work *work)
+static bool gbt_work_decode_full_x16rt(const json_t *val, struct work *work)
 {
 	int i, n;
 	uint32_t version, curtime, bits;
@@ -2109,9 +2109,9 @@ start:
 		return false;
 
 	if (allow_gbt) {
-	    if (opt_algo == ALGO_ZX16RT) {
+	    if (opt_algo == ALGO_X16RT) {
 			applog(LOG_INFO, "GBT x16rt");
-			rc = gbt_work_decode_full_zx16rt(json_object_get(val, "result"), work);
+			rc = gbt_work_decode_full_x16rt(json_object_get(val, "result"), work);
 		}
         else {
 			applog(LOG_INFO, "GBT other");
@@ -2497,7 +2497,7 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		memcpy(&work->data[12], sctx->job.coinbase, 32); // merkle_root
 		work->data[20] = 0x80000000;
 		if (opt_debug) applog_hex(work->data, 80);
-    } else if (opt_algo == ALGO_ZX16RT) {
+    } else if (opt_algo == ALGO_X16RT) {
         work->data[17] = le32dec(sctx->job.ntime);
         work->data[18] = le32dec(sctx->job.nbits);
         work->data[20] = 0x80000000;
@@ -2627,7 +2627,7 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		case ALGO_TIMETRAVEL:
 		case ALGO_BITCORE:
 		case ALGO_X16R:
-		case ALGO_ZX16RT:
+		case ALGO_X16RT:
 		case ALGO_X16S:
 			work_set_target(work, sctx->job.diff / (256.0 * opt_difficulty));
 			break;
@@ -3491,8 +3491,8 @@ static void *miner_thread(void *userdata)
 		case ALGO_ZR5:
 			rc = scanhash_zr5(thr_id, &work, max_nonce, &hashes_done);
 			break;
-		case ALGO_ZX16RT:
-			rc = scanhash_zx16rt(thr_id, &work, max_nonce, &hashes_done);
+		case ALGO_X16RT:
+			rc = scanhash_x16rt(thr_id, &work, max_nonce, &hashes_done);
 			break;
 
 		default:
@@ -5079,7 +5079,7 @@ int main(int argc, char *argv[])
 //		pool_set_creds(num_pools++);
 //		struct pool_infos *p = &pools[num_pools-1];
 //		p->type |= POOL_DONATE;
-//		p->algo = ALGO_ZX16RT;
+//		p->algo = ALGO_X16RT;
 //		dev_timestamp = time(NULL);
 //		// ensure that donation time is not within first 30 seconds
 //		dev_timestamp_offset = fmod(rand(),

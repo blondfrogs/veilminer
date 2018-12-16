@@ -1454,7 +1454,7 @@ static bool stratum_notify(struct stratum_ctx *sctx, json_t *params)
 	char algo[64] = { 0 };
 	get_currentalgo(algo, sizeof(algo));
 	bool has_claim = !strcasecmp(algo, "lbry");
-	bool is_x16rt = !strcasecmp(algo, "zx16rt");
+	bool is_x16rt = !strcasecmp(algo, "x16rt");
 	applog(LOG_INFO, "bool is %u", is_x16rt);
 
 	if (sctx->is_equihash) {
@@ -1500,7 +1500,7 @@ static bool stratum_notify(struct stratum_ctx *sctx, json_t *params)
 		if (!denom10 || !denom100 || !denom1000 || !denom10000 || !prooffullnode || strlen(denom10) != 64 ||
 			strlen(denom100) != 64 || strlen(denom1000) != 64 || strlen(denom10000) != 64 ||
 			strlen(prooffullnode) != 64) {
-			applog(LOG_ERR, "Stratum notify: invalid zx16rt parameters");
+			applog(LOG_ERR, "Stratum notify: invalid x16rt parameters");
 			goto out;
 		}
 	}
@@ -2354,8 +2354,8 @@ void print_hash_tests(void)
 	x16r_hash(&hash[0], &buf[0]);
 	printpfx("X16r", hash);
 
-//	zx16rt_hash(&hash[0], &buf[0]);
-//	printpfx("ZX16rt", hash);
+//	x16rt_hash(&hash[0], &buf[0]);
+//	printpfx("X16rt", hash);
 
 	x16s_hash(&hash[0], &buf[0]);
 	printpfx("X16s", hash);

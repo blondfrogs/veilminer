@@ -69,7 +69,7 @@ enum sha_algos {
 	ALGO_WHIRLPOOLX,
 	ALGO_WILDKECCAK,
 	ALGO_ZR5,
-	ALGO_ZX16RT,
+	ALGO_X16RT,
 	ALGO_AUTO,
 	ALGO_COUNT
 };
@@ -141,7 +141,7 @@ static const char *algo_names[] = {
 	"whirlpoolx",
 	"wildkeccak",
 	"zr5",
-	"zx16rt",
+	"x16rt",
 	"auto", /* reserved for multi algo */
 	""
 };
@@ -195,8 +195,8 @@ static inline int algo_to_int(char* arg)
 			i = ALGO_WHIRLPOOL;
 		else if (!strcasecmp("ziftr", arg))
 			i = ALGO_ZR5;
-		else if (!strcasecmp("zx16rt", arg))
-			i = ALGO_ZX16RT;
+		else if (!strcasecmp("x16rt", arg))
+			i = ALGO_X16RT;
 		else
 			i = -1;
 	}
